@@ -33,25 +33,6 @@ STRING          \"{_CHARACTER}*\"
 INTEGER         [1-9]{DIGIT}*|0|0[0-7]+|0[xX][A-Fa-f0-9]+
 _REAL           {DIGIT}+\.{DIGIT}+
 REAL            {_REAL}|{_REAL}[eE]{DIGIT}+|{_REAL}[eE][+-]{DIGIT}+
-COMMENT         \/\/[^\n]*|\/\*([^\*]|\*+[^\*\/])*\*+\/
-_OPERATOR       [\+\-\*\/%!=<>]
-OPERATOR        {_OPERATOR}|{_OPERATOR}=|&&|\|\||\+\+|\-\-|,
-PUNCT           [\(\)\{\}\[\];:]
-ERROR           [^{WS}{KEYWORD}{ID}{CHARACTER}{STRING}{INTEGER}{REAL}{COMMENT}{OPERATOR}{PUNCT}]
-
-%%
-
-WS              [ \t\n]+
-KEYWORD         break|case|char|default|do|else|float|for|if|int|return|switch|void|while
-DIGIT           [0-9]
-LETTER_         [A-Za-z_]
-ID              {LETTER_}({LETTER_}|{DIGIT})*
-_CHARACTER      \\[abfnrtv0\\\'\"\?]|[^\\\'\"\@\$]
-CHARACTER       \'{_CHARACTER}\'
-STRING          \"{_CHARACTER}*\"
-INTEGER         [1-9]{DIGIT}*|0|0[0-7]+|0[xX][A-Fa-f0-9]+
-_REAL           {DIGIT}+\.{DIGIT}+
-REAL            {_REAL}|{_REAL}[eE]{DIGIT}+|{_REAL}[eE][+-]{DIGIT}+
 COMMENT         \/\/[^\n]*|\/\*([^\*]|(\*)+[^\*\/])*(\*)+\/
 _OPERATOR       [\+\-\*\/%!=<>]
 OPERATOR        {_OPERATOR}|{_OPERATOR}=|&&|\|\||\+\+|\-\-|,
