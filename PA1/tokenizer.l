@@ -11,10 +11,35 @@ union{
         char* sVal;
 } yylval;
 
+
+//
+
+char character[] = {'a', 'b', 'f', 'n', 'r', 't', 'v', '0', '\\', '\'', '\"', '\"'};
+char escape[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\0', '\\', '\'', '\"', '\"'};
+
 int process_int(char *);
 char* process_str(char *);
 
 %}
+
+WS              [ \t\n]+
+KEYWORD         break|case|char|default|do|else|float|for|if|int|return|switch|void|while
+DIGIT           [0-9]
+LETTER_         [A-Za-z_]
+ID              {LETTER_}({LETTER_}|{DIGIT})*
+_CHARACTER      \\[abfnrtv0\\\'\"\?]|[^\\\'\"\@\$]
+CHARACTER       \'{_CHARACTER}\'
+STRING          \"{_CHARACTER}*\"
+INTEGER         [1-9]{DIGIT}*|0|0[0-7]+|0[xX][A-Fa-f0-9]+
+_REAL           {DIGIT}+\.{DIGIT}+
+REAL            {_REAL}|{_REAL}[eE]{DIGIT}+|{_REAL}[eE][+-]{DIGIT}+
+COMMENT         \/\/[^\n]*|\/\*([^\*]|\*+[^\*\/])*\*+\/
+_OPERATOR       [\+\-\*\/%!=<>]
+OPERATOR        {_OPERATOR}|{_OPERATOR}=|&&|\|\||\+\+|\-\-|,
+PUNCT           [\(\)\{\}\[\];:]
+ERROR           [^{WS}{KEYWORD}{ID}{CHARACTER}{STRING}{INTEGER}{REAL}{COMMENT}{OPERATOR}{PUNCT}]
+
+%%
 
 WS              [ \t\n]+
 KEYWORD         break|case|char|default|do|else|float|for|if|int|return|switch|void|while
@@ -55,8 +80,6 @@ int main(int argc, char *argv[]){
         yyin = fopen(argv[1], "r");
 
 // Insert source code here
-        int isError = 0;;
-        char *str;
         while((tn = yylex()) != TEOF){
                 switch(tn){
                         case TINTEGER:
@@ -76,23 +99,20 @@ int main(int argc, char *argv[]){
                                 break;
                         case TERROR:
                                 printf("Error occurred\n");
-                                isError = 1;
+                                return -1;
                 }
-                if(isError)
-                        return -1;
         }
         fclose(yyin);
         return 0;
 }
 
 int process_int(char* yytext){
-        static char character[] = {'a', 'b', 'f', 'n', 'r', 't', 'v', '0', '\\', '\'', '\"', '\"'};
-        static char escape[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\0', '\\', '\'', '\"', '\"'};
-
-        if(yytext[0] == '\''){  // character
-                for(int i = 0; i < sizeof(escape)/sizeof(char); i++)
-                        if(yytext[2] == character[i])
-                                 return escape[i];
+        if(yytext[0] == '\''){
+                if(yytext[1] == '\\')   // escape
+                        for(int i = 0; i < sizeof(escape)/sizeof(char); i++)
+                                if(yytext[2] == character[i])
+                                         return escape[i];
+                return yytext[1];       // character
         }
         if(strstr(yytext, "0x") != NULL || strstr(yytext, "0X") != NULL)
                 return strtol(yytext, NULL, 16);
@@ -103,20 +123,18 @@ int process_int(char* yytext){
 
 char* process_str(char* yytext){
         char* str = (char *)malloc(sizeof(char)*(yyleng));
-        for(int i = 1, j = 0; i < yyleng-1; i++){
-                if(i < yyleng-2 && yytext[i] == '\\'){
-                        if(yytext[i+1] == 't'){
-                                str[j] = '\t';
-                                i++;
-                        }
-                        else if(yytext[i+1] == 'n'){
-                                str[j] = '\n';
-                                i++;
+        for(int i = 1, j = 0; i < yyleng-1; i++, j++){
+                if(i < yyleng-2 && yytext[i] == '\\'){  // escape
+                        for(int k = 0; k < sizeof(escape)/sizeof(char); k++){
+                                if(yytext[i+1] == character[k]){
+                                        str[j] = escape[k];
+                                        i++;
+                                        break;
+                                }
                         }
                 }
                 else
                         str[j] = yytext[i];
-                j++;
          }
         return str;
 }
