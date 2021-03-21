@@ -17,18 +17,18 @@ WS              [ \t\n]+
 KEYWORD         break|case|char|default|do|else|float|for|if|int|return|swith|void|while
 DIGIT           [0-9]
 LETTER_         [A-Za-z_]
-ID              {LETTER_}({LETTER_}|{DIGIT})*
-_CHARACTER      \\[abfnrtv0\\\'\"\?]|[^\\\'\"\n\t\@\$]
+_CHARACTER      \\[abfnrtv0\\\'\"\?]|[^\\\'\"\n\@\$]
 CHARACTER       \'{_CHARACTER}\'
 INTEGER         [1-9]{DIGIT}*|0|0[0-7]+|0[xX][A-Fa-f0-9]+
 _REAL           {DIGIT}+\.{DIGIT}+
 REAL            {_REAL}|{_REAL}[eE]{DIGIT}+|{_REAL}[eE][+-]{DIGIT}+
-COMMENT         \/\/{CHARACTER}*|\/\*{CHARACTER}\*\/
+COMMENT         \/\/[^\n]*\n|\/\*([^\*]|\*+[^\*\/]*)\*+\/
 _OPERATOR       \+|\-|\/|%|!|=|<|>
 OPERATOR        {_OPERATOR}|{_OPERATOR}=|&&|\|\||\+\+|\-\-|,
 PUNCT           [\(|\)|\{|\}|\[|\]|;|:]
-STRING          \"{_CHARACTER}+\"
-ERROR           ^[{WS}{KEYWORD}{ID}{CHARACTER}{STRING}{INTEGER}{REAL}{COMMENT}{OPERATOR}{PUNCT}]+
+STRING          \"{_CHARACTER}*\"
+ERROR           ^[{WS}{KEYWORD}{ID}{CHARACTER}{STRING}{INTEGER}{REAL}{COMMENT}{OPERATOR}{PUNCT}]
+ID              {LETTER_}({LETTER_}|{DIGIT})*
 
 %%
 
@@ -51,11 +51,22 @@ int main(int argc, char *argv[]){
         yyin = fopen(argv[1], "r");
 
 // Insert source code here
+        int isError = 0;
+        char a;
+        char character[] = {'a', 'b', 'f', 'n', 'r', 't', 'v', '0', '\\', '\'', '\"', '\"'};
+        char escape[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\0', '\\', '\'', '\"', '\"'};
         char *str;
         while((tn = yylex()) != TEOF){
                 switch(tn){
                         case TINTEGER:
-                                if(strstr(yytext, "0x") != NULL || strstr(yytext, "0X") != NULL)
+                                if(yytext[0] == '\''){  // character
+                                        for(int i = 0; i < sizeof(escape)/sizeof(char); i++)
+                                                if(yytext[2] == character[i]){
+                                                        yylval.iVal = escape[i];
+                                                        break;
+                                                }
+                                }
+                                else if(strstr(yytext, "0x") != NULL || strstr(yytext, "0X") != NULL)
                                         yylval.iVal = strtol(yytext, NULL, 16);
                                 else if(strchr(yytext, '0') != NULL && strlen(yytext) > 1)
                                         yylval.iVal = strtol(yytext, NULL, 8);
@@ -68,19 +79,24 @@ int main(int argc, char *argv[]){
                                 printf("%-15s:%19s, %5.2f\n", yytext, tokenType[tn-1], yylval.rVal);
                                 break;
                         case TSTRING:
-                                str = (char *)malloc(sizeof(char)*(strlen(yytext)-2));
-                                strcpy(str, yytext+1);
+                                str = (char *)malloc(sizeof(char)*(strlen(yytext)));
+                                strncpy(str, yytext+1, strlen(yytext)-2);
                                 yylval.sVal = str;
+                                printf("%s\n", str);
                                 printf("%-15s:%19s, %s\n", yytext, tokenType[tn-1], yylval.sVal);
                                 break;
-                        case TERROR:
-                                printf("Error occurred\n");
-                                return -1;
                         case TKEYWORD: case TIDENTIFIER: case TCOMMENT: case TOPERATOR: case TPUNCTUATION:
                                 printf("%-15s:%19s\n", yytext, tokenType[tn-1]);
                                 break;
+                        case TERROR:
+                                printf("Error occurred\n");
+                                isError = 1;
                 }
+                if(isError)
+                        return -1;
         }
         fclose(yyin);
         return 0;
 }
+
+             
