@@ -97,7 +97,7 @@ int process_int(char* yytext){
         }
         if(strstr(yytext, "0x") != NULL || strstr(yytext, "0X") != NULL)
                 return strtol(yytext, NULL, 16);
-        if(strchr(yytext, '0') != NULL && yyleng > 1)
+        if(yytext[0] == '0' && yyleng > 1)
                 return strtol(yytext, NULL, 8);
         return atoi(yytext);
 }
