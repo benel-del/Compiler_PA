@@ -10,12 +10,11 @@
         char* sVal;
 }
 
-//      
+//
+%token          TVOID TINT TFLOAT TCHAR TIF TELSE TSWITCH TCASE TDEFAULT TRETURN TBREAK TWHILE TDO TFOR
+%token<sVal>    PM OP1 OP2 OR AND TIDENTIFIER TSTRING
 %token<iVal>    TINTEGER
 %token<rVal>    TREAL
-%token<sVal>    TIDENTIFIER TSTRING
-%token<sVal>    PM OP1 OP2 OR AND
-%token          TVOID TINT TFLOAT TCHAR TIF TELSE TSWITCH TCASE TDEFAULT TRETURN TBREAK TWHILE TDO TFOR
 
 %%
 
@@ -49,14 +48,14 @@ LDecList        : LDecList VarDec       { printf("LDecList -> LDecList VarDec\n"
                 ;
 VarDec          : VarType IDs ';'       { printf("VarDec -> VarType IDs ;\n"); }
                 ;
-VarType         : TINT      { printf("VarType -> int\n"); }
+VarType         : TINT          { printf("VarType -> int\n"); }
                 | TCHAR         { printf("VarType -> char\n"); }
-                | TFLOAT         { printf("VarType -> float\n"); }
+                | TFLOAT        { printf("VarType -> float\n"); }
                 ;
 IDs             : IDs ',' Value { printf("IDs -> IDs , Value\n"); }
                 | Value         { printf("IDs -> Value\n"); }
                 ;
-Value           : TIDENTIFIER '[' TINTEGER ']'      { printf("Value -> %s [ TINTEGER ]\n", $1); }
+Value           : TIDENTIFIER '[' TINTEGER ']'  { printf("Value -> %s [ TINTEGER ]\n", $1); }
                 | TIDENTIFIER                   { printf("Value -> %s\n", $1); }
                 ;
 StmtList        : StmtList Stmt         { printf("StmtList -> StmtList Stmt\n"); }
@@ -84,13 +83,14 @@ SwitchStmt      : TSWITCH '(' Expr ')' '{' CaseList DefaultCase '}'     { printf
                 ;
 CaseList        : CaseList TCASE TINTEGER ':' StmtList  { printf("CaseList -> CaseList TCASE TINTEGER : StmtList\n"); }
                 | TCASE TINTEGER ':' StmtList           { printf("CaseList -> TCASE TINTEGER : StmtList\n"); }
+                ;
 DefaultCase     : TDEFAULT ':' StmtList { printf("DefaultCase -> TDEFAULT : StmtList\n"); }
                 |                       { printf("DefaultCase -> Empty\n"); }
                 ;
 ReturnStmt      : TRETURN Expr ';'      { printf("ReturnStmt -> TRETURN Expr ;\n"); }
                 | TRETURN ';'           { printf("ReturnStmt -> TRETURN ;\n"); }
                 ;
-BreakStmt       : TBREAK ';'            { printf("BreakStmt -> TBREAK ;\n"); }
+BreakStmt       : TBREAK ';'    { printf("BreakStmt -> TBREAK ;\n"); }
                 ;
 ExprStmt        : Expr ';'      { printf("ExprStmt -> Expr ;\n"); }
                 | ';'           { printf("ExprStmt -> ;\n"); }
@@ -99,21 +99,21 @@ Expr            : AssignExpr    { printf("Expr -> AssignExpr\n"); }
                 | SimpleExpr    { printf("Expr -> SimpleExpr\n"); }
                 ;
 AssignExpr      : Variable '=' Expr     { printf("AssignExpr -> Variable = Expr\n"); }
-                | Variable OP1 Expr  { printf("AssignExpr -> Variable %s Expr\n", $2); }
+                | Variable OP1 Expr     { printf("AssignExpr -> Variable %s Expr\n", $2); }
                 ;
-Variable        : TIDENTIFIER '[' Expr ']'  { printf("Variable -> %s [ Expr ]\n", $1); }
-                | TIDENTIFIER           { printf("Variable -> %s\n", $1); }
+Variable        : TIDENTIFIER '[' Expr ']'      { printf("Variable -> %s [ Expr ]\n", $1); }
+                | TIDENTIFIER                   { printf("Variable -> %s\n", $1); }
                 ;
-SimpleExpr      : SimpleExpr OR AndExpr     { printf("SimpleExpr -> SimpleExpr || AndExpr\n"); }
-                | AndExpr                       { printf("SimpleExpr -> AndExpr\n"); }
+SimpleExpr      : SimpleExpr OR AndExpr { printf("SimpleExpr -> SimpleExpr || AndExpr\n"); }
+                | AndExpr               { printf("SimpleExpr -> AndExpr\n"); }
                 ;
-AndExpr         : AndExpr AND RelExpr        { printf("AndExpr -> AndExpr && RelExpr\n"); }
-                | RelExpr                       { printf("AndExpr -> RelExpr\n"); }
+AndExpr         : AndExpr AND RelExpr   { printf("AndExpr -> AndExpr && RelExpr\n"); }
+                | RelExpr               { printf("AndExpr -> RelExpr\n"); }
                 ;
-RelExpr         : RelExpr '<' AddExpr           { printf("RelExpr -> RelExpr < AddExpr\n"); }
-                | RelExpr '>' AddExpr           { printf("RelExpr -> RelExpr > AddExpr\n"); }
-                | RelExpr OP2 AddExpr        { printf("RelExpr -> RelExpr %s AddExpr\n", $2); }
-                | AddExpr                       { printf("RelExpr -> AddExpr\n"); }
+RelExpr         : RelExpr '<' AddExpr   { printf("RelExpr -> RelExpr < AddExpr\n"); }
+                | RelExpr '>' AddExpr   { printf("RelExpr -> RelExpr > AddExpr\n"); }
+                | RelExpr OP2 AddExpr   { printf("RelExpr -> RelExpr %s AddExpr\n", $2); }
+                | AddExpr               { printf("RelExpr -> AddExpr\n"); }
                 ;
 AddExpr         : AddExpr '+' Term      { printf("AddExpr -> AddExpr + Term\n"); }
                 | AddExpr '-' Term      { printf("AddExpr -> AddExpr - Term\n"); }
@@ -126,7 +126,7 @@ Term            : Term '*' Factor       { printf("Term -> Term * Factor\n"); }
                 ;
 Factor          : '(' Expr ')'          { printf("Factor -> ( Expr )\n"); }
                 | FuncCall              { printf("Factor -> FuncCall\n"); }
-                | '-' FuncCall          { printf("Factor -> - FuncCall\n"); }
+                | '-' Factor            { printf("Factor -> - Factor\n"); }
                 | Variable              { printf("Factor -> Variable\n"); }
                 | Variable IncDec       { printf("Factor -> Variable IncDec\n"); }
                 | IncDec Variable       { printf("Factor -> IncDec Variable\n"); }
@@ -135,7 +135,7 @@ Factor          : '(' Expr ')'          { printf("Factor -> ( Expr )\n"); }
 NumberLiteral   : TINTEGER      { printf("NumberLiteral -> %d\n", $1); }
                 | TREAL         { printf("NumberLiteral -> %.2f\n", $1); }
                 ;
-IncDec          : PM        { printf("IncDec -> %s\n", $1); }
+IncDec          : PM            { printf("IncDec -> %s\n", $1); }
                 ;
 WhileMatchedStmt: TWHILE '(' Expr ')' MatchedStmt       { printf("WhileMatchedStmt -> TWHILE ( Expr ) MatchedStmt\n"); }
                 ;
@@ -147,10 +147,11 @@ ForMatchedStmt  : TFOR '(' Expr ';' Expr ';' Expr ')' MatchedStmt       { printf
                 ;
 ForOpenStmt     : TFOR '(' Expr ';' Expr ';' Expr ')' OpenStmt  { printf("ForOpenStmt -> TFOR ( Expr ; Expr ; Expr ) OpenStmt\n"); }
                 ;
-FuncCall        : TIDENTIFIER '(' Arguments ')' { printf("FuncCall -> %s ( Arguments )\n", $1); }
+FuncCall        : TIDENTIFIER '(' Arguments ')'         { printf("FuncCall -> %s ( Arguments )\n", $1); }
                 ;
 Arguments       : ArgumentList  { printf("Arguments -> ArgumentList\n"); }
                 |               { printf("Arguments -> Empty\n"); }
+                ;
 ArgumentList    : ArgumentList ',' Expr         { printf("ArgumentList -> ArgumentList , Expr\n"); }
                 | ArgumentList ',' TSTRING      { printf("ArgumentList -> ArgumentList , %s\n", $3); }
                 | Expr                          { printf("ArgumentList -> Expr\n"); }

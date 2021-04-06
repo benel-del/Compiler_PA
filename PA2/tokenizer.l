@@ -10,14 +10,18 @@ char escape[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\0', '\\', '\'', '\"
 
 int process_int(char *);
 char* process_str(char *);
+char* process_id(char *);
 %}
 
 WS              [ \t\n]+
 DIGIT           [0-9]
 LETTER_         [A-Za-z_]
-PUNCT           \(|\)|\{|\}|\[|\]|\;|\:|\,
-OPERATOR        \=|\<|\>|\+|\-|\*|\/|\%
 ID              {LETTER_}({LETTER_}|{DIGIT})*
+PM              \+\+|\-\-
+OP1             \+\=|\-\=|\*\=|\/\=|%\=
+OP2             \<\=|\>\=|\=\=|\!\=
+OR              \|\|
+AND             \&\&
 _CHARACTER      \\[abfnrtv0\\\'\"\?]|[^\\\'\"\@\$]
 CHARACTER       \'{_CHARACTER}\'
 STRING          \"{_CHARACTER}*\"
@@ -25,45 +29,42 @@ INTEGER         [1-9]{DIGIT}*|0|0[0-7]+|0[xX][A-Fa-f0-9]+
 _REAL           {DIGIT}+\.{DIGIT}+
 REAL            {_REAL}|{_REAL}[eE]{DIGIT}+|{_REAL}[eE][+-]{DIGIT}+
 COMMENT         \/\/[^\n]*|\/\*([^\*]|\*+[^\*\/])*\*+\/
-PM              \+\+|\-\-
-OP1             \+\=|\-\=|\*\=|\/\=|%\=
-OP2             \<\=|\>\=|\=\=|\!\=
-OR              \|\|
-AND             \&\&
+PUNCT           \(|\)|\{|\}|\[|\]|\;|\:|\,
+OPERATOR        \=|\<|\>|\+|\-|\*|\/|\%
 
 %%
 
-{WS}                    {}
-void                  {return TVOID;}
-return                {return TRETURN;}
-break                 {return TBREAK;}
-switch                {return TSWITCH;}
-case                  {return TCASE;}
-default               {return TDEFAULT;}
-do               {return TDO;}
-for                   {return TFOR;}
-while                 {return TWHILE;}
-if                    {return TIF;}
-else                  {return TELSE;}
-int                   {return TINT;}
-float                 {return TFLOAT;}
-char                  {return TCHAR;}
+{WS}            {}
+void            {return TVOID;}
+return          {return TRETURN;}
+break           {return TBREAK;}
+switch          {return TSWITCH;}
+case            {return TCASE;}
+default         {return TDEFAULT;}
+do              {return TDO;}
+for             {return TFOR;}
+while           {return TWHILE;}
+if              {return TIF;}
+else            {return TELSE;}
+int             {return TINT;}
+float           {return TFLOAT;}
+char            {return TCHAR;}
 
-{PM} {yylval.sVal = yytext; return PM;}
-{OP1} {yylval.sVal = yytext; return OP1;}
-{OP2} {yylval.sVal = yytext; return OP2;}
-{OPERATOR} {return yytext[0];}
-{OR} {yylval.sVal = yytext; return OR;}
-{AND} {yylval.sVal = yytext; return AND;}
+{PM}            {yylval.sVal = process_id(yytext); return PM;}
+{OP1}           {yylval.sVal = process_id(yytext); return OP1;}
+{OP2}           {yylval.sVal = process_id(yytext); return OP2;}
+{OPERATOR}      {return yytext[0];}
+{OR}            {yylval.sVal = process_id(yytext); return OR;}
+{AND}           {yylval.sVal = process_id(yytext); return AND;}
 
-{ID}                    {yylval.sVal = yytext; return TIDENTIFIER;}
-{INTEGER}               {yylval.iVal = process_int(yytext); return TINTEGER;}
-{CHARACTER}             {yylval.iVal = process_int(yytext); return TINTEGER;}
-{REAL}                  {yylval.rVal = atof(yytext);return TREAL;}
-{STRING}                {yylval.sVal = process_str(yytext); return TSTRING;}
-{COMMENT}               {return yytext[0];}
-{PUNCT}                 {return yytext[0];}
-.                       {printf("Error\n"); return yytext[0];}
+{ID}            {yylval.sVal = process_id(yytext); return TIDENTIFIER;}
+{INTEGER}       {yylval.iVal = process_int(yytext); return TINTEGER;}
+{CHARACTER}     {yylval.iVal = process_int(yytext); return TINTEGER;}
+{REAL}          {yylval.rVal = atof(yytext);return TREAL;}
+{STRING}        {yylval.sVal = process_str(yytext); return TSTRING;}
+{COMMENT}       {return yytext[0];}
+{PUNCT}         {return yytext[0];}
+.               {return yytext[0];}
 
 %%
 
@@ -97,5 +98,13 @@ char* process_str(char* yytext){
                 else
                         str[j] = yytext[i];
          }
+        return str;
+}
+
+char* process_id(char* yytext){
+        char* str = (char *)malloc(sizeof(yyleng+1));
+        for(int i = 0; i < yyleng; i++)
+                str[i] = yytext[i];
+        str[yyleng] = '\0';
         return str;
 }
