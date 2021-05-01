@@ -294,7 +294,7 @@ ReturnStmt      : TRETURN Expr ';'      {
                         delStack(temp);
                 }
                 | TRETURN ';'           {
-                        ASTNode *top = pop(stack);
+                        ASTNode *top;
                         int count = 0;
                         STACK *temp = initStack();
                         while(top = pop(stack)){
@@ -315,27 +315,36 @@ ReturnStmt      : TRETURN Expr ';'      {
                 }
                 ;
 BreakStmt       : TBREAK ';'    {
+                        //printStack(stack);
+                        push(stack, makeASTNode(_BRKSTMT));
+                        /*
                         printStack(stack);
-                        ASTNode *top = pop(stack);
+                        ASTNode *top, *child;
 
                         int count = 0, num;
                         STACK *temp = initStack();
                         while(top = pop(stack)){
-                                num = getTkNum(top);
-                                if(num == 13 || num > 15 && num < 19){
-                                        push(stack, top);
-                                        for(int i = 0; i < count; i++){
-                                                push(stack, pop(temp));
+                                child = getChild(top);
+                                do{
+                                        num = getTkNum(child);
+                                        if(num == 13 || num > 15 && num < 19){
+                                                push(stack, top);
+                                                for(int i = 0; i < count; i++){
+                                                        push(stack, pop(temp));
+                                                }
+                                                push(stack, makeASTNode(_BRKSTMT));
+                                                break;
+                                        else{
+                                                count++;
+                                                push(temp, top);
                                         }
-                                        push(stack, makeASTNode(_BRKSTMT));
-                                        break;
                                 }
-                                else{
-                                        count++;
-                                        push(stack, top);
-                                }
+                                }while(child = getChild(child));
+                                num = getTkNum(child);
+                                printf("%d\n", num); 
                         }
                         delStack(temp);
+                        */
                 }
                 ;
 ExprStmt        : Expr ';'      {
