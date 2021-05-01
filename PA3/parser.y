@@ -263,6 +263,7 @@ CaseList        : CaseList TCASE TINTEGER ':' StmtList  {
                 ;
 DefaultCase     : TDEFAULT ':' StmtList {
                         ASTNode *stmtList, *defaultStmt = makeASTNode(_DEFAULT);
+                        stmtList = pop(stack);
                         setChild(defaultStmt, stmtList);
                         push(stack, defaultStmt);
                 }
@@ -271,35 +272,70 @@ DefaultCase     : TDEFAULT ':' StmtList {
                 }
                 ;
 ReturnStmt      : TRETURN Expr ';'      {
-                        ASTNode *expr = pop(stack), *top = pop(stack);
-                        switch(getTkNum(top)){
-                                case 3:
+                        ASTNode *expr, *top;
+                        expr = pop(stack);
+
+                        int count = 0;
+                        STACK *temp = initStack();
+                        while(top = pop(stack)){
+                                if(getTkNum(top) == 2){
                                         push(stack, top);
+                                        for(int i = 0; i < count; i++){
+                                                push(stack, pop(temp));
+                                        }
                                         push(stack, setChild(makeASTNode(_RTSTMT), expr));
-                                default:
-                                        push(stack, top);
+                                        break;
+                                }
+                                else{
+                                        count++;
+                                        push(temp, top);
+                                }
                         }
+                        delStack(temp);
                 }
                 | TRETURN ';'           {
                         ASTNode *top = pop(stack);
-                        switch(getTkNum(top)){
-                                case 3:
+                        int count = 0;
+                        STACK *temp = initStack();
+                        while(top = pop(stack)){
+                                if(getTkNum(top) == 2){
                                         push(stack, top);
+                                        for(int i = 0; i < count; i++){
+                                                push(stack, pop(temp));
+                                        }
                                         push(stack, makeASTNode(_RTSTMT));
-                                default:
-                                        push(stack, top);
+                                        break;
+                                }
+                                else{
+                                        count++;
+                                        push(temp, top);
+                                }
                         }
+                        delStack(temp);
                 }
                 ;
 BreakStmt       : TBREAK ';'    {
+                        printStack(stack);
                         ASTNode *top = pop(stack);
-                        switch(getTkNum(top)){
-                                case 14: case 17: case 18: case 19:
+
+                        int count = 0, num;
+                        STACK *temp = initStack();
+                        while(top = pop(stack)){
+                                num = getTkNum(top);
+                                if(num == 13 || num > 15 && num < 19){
                                         push(stack, top);
+                                        for(int i = 0; i < count; i++){
+                                                push(stack, pop(temp));
+                                        }
                                         push(stack, makeASTNode(_BRKSTMT));
-                                default:
+                                        break;
+                                }
+                                else{
+                                        count++;
                                         push(stack, top);
+                                }
                         }
+                        delStack(temp);
                 }
                 ;
 ExprStmt        : Expr ';'      {
@@ -352,7 +388,7 @@ Variable        : TIDENTIFIER '[' Expr ']'      {
                 }
                 ;
 SimpleExpr      : SimpleExpr OR AndExpr {
-                        ASTNode *simpleExpr, *andExpr, *or = makeASTNode(OR_);
+                        ASTNode *simpleExpr, *andExpr, *or = makeASTNodeOP(OR_);
                         andExpr = pop(stack);
                         simpleExpr = pop(stack);
                         setSibling(simpleExpr, andExpr);
@@ -362,7 +398,7 @@ SimpleExpr      : SimpleExpr OR AndExpr {
                 | AndExpr               {}
                 ;
 AndExpr         : AndExpr AND RelExpr   {
-                        ASTNode *andExpr, *relExpr, *and = makeASTNode(AND_);
+                        ASTNode *andExpr, *relExpr, *and = makeASTNodeOP(AND_);
                         relExpr = pop(stack);
                         andExpr = pop(stack);
                         setSibling(andExpr, relExpr);
@@ -453,7 +489,7 @@ Term            : Term '*' Factor       {
 Factor          : '(' Expr ')'          {}
                 | FuncCall              {}
                 | '-' Factor            {
-                    push(stack, setChild(makeASTNodeID("-"), pop(stack)));
+                        push(stack, setChild(makeASTNodeID("-"), pop(stack)));
                 }
                 | Variable              {}
                 | Variable IncDec       {
