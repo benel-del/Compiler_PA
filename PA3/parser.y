@@ -292,6 +292,10 @@ ReturnStmt      : TRETURN Expr ';'      {
                                 }
                         }
                         delStack(temp);
+                        if(getTkNum(top = pop(stack)) != 14)
+                                yyerror("TRETURN is not used in function.");
+                        else
+                                push(stack, top);
                 }
                 | TRETURN ';'           {
                         ASTNode *top;
@@ -312,39 +316,37 @@ ReturnStmt      : TRETURN Expr ';'      {
                                 }
                         }
                         delStack(temp);
+                        if(getTkNum(top = pop(stack)) != 14)    // _RTSTMT
+                                yyerror("TRETURN is not used in function.");
+                        else
+                                push(stack, top);
                 }
                 ;
 BreakStmt       : TBREAK ';'    {
-                        //printStack(stack);
+                        printStack(stack);      //
                         push(stack, makeASTNode(_BRKSTMT));
-                        /*
-                        printStack(stack);
-                        ASTNode *top, *child;
-
-                        int count = 0, num;
+                        
+                        int num;
                         STACK *temp = initStack();
-                        while(top = pop(stack)){
-                                child = getChild(top);
-                                do{
-                                        num = getTkNum(child);
-                                        if(num == 13 || num > 15 && num < 19){
-                                                push(stack, top);
-                                                for(int i = 0; i < count; i++){
-                                                        push(stack, pop(temp));
-                                                }
-                                                push(stack, makeASTNode(_BRKSTMT));
-                                                break;
-                                        else{
-                                                count++;
-                                                push(temp, top);
-                                        }
-                                }
-                                }while(child = getChild(child));
+                        push(temp, pop(stack)); // StmtList 10
+                        push(temp, pop(stack)); // LDecList 9
+                        ASTNode *parent, *child;
+                        parent = pop(stack);    // StmtList
+                        child = getChild(parent);
+                        do{
                                 num = getTkNum(child);
-                                printf("%d\n", num); 
-                        }
+                                printf("num: %d\n", num);
+                                if(num == 13 || num > 15 && num < 19){
+                                        push(stack, parent);
+                                        push(stack, pop(temp));
+                                        push(stack, pop(temp));
+                                        push(stack, makeASTNode(_BRKSTMT));
+                                        break;
+                                }
+                        } while(child = getSibling(child));
                         delStack(temp);
-                        */
+                        if(child == NULL)
+                                yyerror("TBREAK is not used in loop or switch.");
                 }
                 ;
 ExprStmt        : Expr ';'      {
