@@ -6,9 +6,7 @@
         int yylex(void);
         int yyerror(char* s);
         int checkBreak(ASTNode *p, int br);
-        int checkReturn(ASTNode *p, int rt);
         int isBrError, isBreak;
-        int isRtError, isReturn;
 %}
 %union{
         int iVal;
@@ -277,12 +275,10 @@ DefaultCase     : TDEFAULT ':' StmtList {
                 ;
 ReturnStmt      : TRETURN Expr ';'      {
                         push(stack, setChild(makeASTNode(_RTSTMT), pop(stack)));
-                        isReturn++;
     
                 }
                 | TRETURN ';'           {
                         push(stack, makeASTNode(_RTSTMT));
-                        isReturn++;
                 }
                 ;
 BreakStmt       : TBREAK ';'    {
@@ -565,27 +561,18 @@ int main(int argc, char* argv[]){
         ASTNode *prog = 0;
         extern FILE *yyin;
         stack = initStack();
-        isBreak = isReturn = 0;
+        isBreak = isBrError = 0;
 
         yyin = fopen(argv[1], "r");
         yyparse();
         fclose(yyin);
 
         prog = pop(stack);
-        isBrError = isRtError = 0;
-        if(isBreak)
-                checkBreak(prog, 0);
-        if(isReturn)
-                checkReturn(prog, 0);
-        
-        if(!isBrError && !isRtError)
-                printAST(prog);
+        checkBreak(prog, 0);
         if(isBrError)
                 yyerror("TBREAK is not used in loop or switch.");
-        if(isRtError)
-                yyerror("TRETURN is not used in function.");
-
-        //delAST(prog);
+        
+        printAST(prog);
         delStack(stack);
         return 0;
 }
@@ -616,31 +603,7 @@ int checkBreak(ASTNode *p, int br){
                         checkBreak(getChild(p), 1);
                 else
                         checkBreak(getChild(p), br);
-        }          
-
-        return 1;
-}
-
-int checkReturn(ASTNode *p, int rt){
-        if(isRtError)
-                return 0;
-        if(getTkNum(p) == 14){  // return
-                if(!rt)
-                        isRtError = 1;
-                else
-                        isReturn--;
         }
 
-        if(getSibling(p) != NULL)
-                checkReturn(getSibling(p), rt);
-        if(isRtError)
-                return 0;
-        
-        if(getChild(p) != NULL){
-                if(getTkNum(p) == 2)    // FuncDec
-                        checkReturn(getChild(p), 1);
-                else
-                        checkReturn(getChild(p), rt);
-        }
         return 1;
 }
