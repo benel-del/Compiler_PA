@@ -5,6 +5,10 @@
         STACK *stack;
         int yylex(void);
         int yyerror(char* s);
+        int checkBreak(ASTNode *p, int br);
+        int checkReturn(ASTNode *p, int rt);
+        int isBrError, isBreak;
+        int isRtError, isReturn;
 %}
 %union{
         int iVal;
@@ -272,81 +276,18 @@ DefaultCase     : TDEFAULT ':' StmtList {
                 }
                 ;
 ReturnStmt      : TRETURN Expr ';'      {
-                        ASTNode *expr, *top;
-                        expr = pop(stack);
-
-                        int count = 0;
-                        STACK *temp = initStack();
-                        while(top = pop(stack)){
-                                if(getTkNum(top) == 2){
-                                        push(stack, top);
-                                        for(int i = 0; i < count; i++){
-                                                push(stack, pop(temp));
-                                        }
-                                        push(stack, setChild(makeASTNode(_RTSTMT), expr));
-                                        break;
-                                }
-                                else{
-                                        count++;
-                                        push(temp, top);
-                                }
-                        }
-                        delStack(temp);
-                        if(getTkNum(top = pop(stack)) != 14)
-                                yyerror("TRETURN is not used in function.");
-                        else
-                                push(stack, top);
+                        push(stack, setChild(makeASTNode(_RTSTMT), pop(stack)));
+                        isReturn++;
+    
                 }
                 | TRETURN ';'           {
-                        ASTNode *top;
-                        int count = 0;
-                        STACK *temp = initStack();
-                        while(top = pop(stack)){
-                                if(getTkNum(top) == 2){
-                                        push(stack, top);
-                                        for(int i = 0; i < count; i++){
-                                                push(stack, pop(temp));
-                                        }
-                                        push(stack, makeASTNode(_RTSTMT));
-                                        break;
-                                }
-                                else{
-                                        count++;
-                                        push(temp, top);
-                                }
-                        }
-                        delStack(temp);
-                        if(getTkNum(top = pop(stack)) != 14)    // _RTSTMT
-                                yyerror("TRETURN is not used in function.");
-                        else
-                                push(stack, top);
+                        push(stack, makeASTNode(_RTSTMT));
+                        isReturn++;
                 }
                 ;
 BreakStmt       : TBREAK ';'    {
-                        printStack(stack);      //
                         push(stack, makeASTNode(_BRKSTMT));
-                        
-                        int num;
-                        STACK *temp = initStack();
-                        push(temp, pop(stack)); // StmtList 10
-                        push(temp, pop(stack)); // LDecList 9
-                        ASTNode *parent, *child;
-                        parent = pop(stack);    // StmtList
-                        child = getChild(parent);
-                        do{
-                                num = getTkNum(child);
-                                printf("num: %d\n", num);
-                                if(num == 13 || num > 15 && num < 19){
-                                        push(stack, parent);
-                                        push(stack, pop(temp));
-                                        push(stack, pop(temp));
-                                        push(stack, makeASTNode(_BRKSTMT));
-                                        break;
-                                }
-                        } while(child = getSibling(child));
-                        delStack(temp);
-                        if(child == NULL)
-                                yyerror("TBREAK is not used in loop or switch.");
+                        isBreak++;
                 }
                 ;
 ExprStmt        : Expr ';'      {
@@ -624,10 +565,26 @@ int main(int argc, char* argv[]){
         ASTNode *prog = 0;
         extern FILE *yyin;
         stack = initStack();
+        isBreak = isReturn = 0;
+
         yyin = fopen(argv[1], "r");
         yyparse();
         fclose(yyin);
-        printAST(prog = pop(stack));
+
+        prog = pop(stack);
+        isBrError = isRtError = 0;
+        if(isBreak)
+                checkBreak(prog, 0);
+        if(isReturn)
+                checkReturn(prog, 0);
+        
+        if(!isBrError && !isRtError)
+                printAST(prog);
+        if(isBrError)
+                yyerror("TBREAK is not used in loop or switch.");
+        if(isRtError)
+                yyerror("TRETURN is not used in function.");
+
         //delAST(prog);
         delStack(stack);
         return 0;
@@ -636,4 +593,54 @@ int main(int argc, char* argv[]){
 int yyerror(char *s){
         printf("Parse error : %s\n", s);
         return 0;
+}
+
+int checkBreak(ASTNode *p, int br){
+        if(isBrError || !isBreak)
+                return 0;
+        if(getTkNum(p) == 15){  // break
+                if(!br)
+                        isBrError = 1;
+                else
+                        isBreak--;
+        }
+
+        if(getSibling(p) != NULL)
+                checkBreak(getSibling(p), br);
+        if(isBrError)
+                return 0;
+        
+        int num = getTkNum(p);
+        if(getChild(p) != NULL){
+                if(num == 13 || 15 < num && num < 19)   // switch or loop
+                        checkBreak(getChild(p), 1);
+                else
+                        checkBreak(getChild(p), br);
+        }          
+
+        return 1;
+}
+
+int checkReturn(ASTNode *p, int rt){
+        if(isRtError)
+                return 0;
+        if(getTkNum(p) == 14){  // return
+                if(!rt)
+                        isRtError = 1;
+                else
+                        isReturn--;
+        }
+
+        if(getSibling(p) != NULL)
+                checkReturn(getSibling(p), rt);
+        if(isRtError)
+                return 0;
+        
+        if(getChild(p) != NULL){
+                if(getTkNum(p) == 2)    // FuncDec
+                        checkReturn(getChild(p), 1);
+                else
+                        checkReturn(getChild(p), rt);
+        }
+        return 1;
 }
