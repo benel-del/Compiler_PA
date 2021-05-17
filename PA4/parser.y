@@ -1,7 +1,7 @@
 %{
         #include <stdio.h>
         #include <stdlib.h>
-        #include "ast.h"
+        #include "taclib.h"
         STACK *stack;
         int yylex(void);
         int yyerror(char* s);
@@ -558,7 +558,7 @@ ArgumentList    : ArgumentList ',' Expr         {
 
 %%
 int main(int argc, char* argv[]){
-        ASTNode *prog = 0;
+        ASTNode *root;
         extern FILE *yyin;
         stack = initStack();
         isBreak = isBrError = 0;
@@ -567,13 +567,15 @@ int main(int argc, char* argv[]){
         yyparse();
         fclose(yyin);
 
-        prog = pop(stack);
-        checkBreak(prog, 0);
+        root = pop(stack);
+        checkBreak(root, 0);
         if(isBrError)
                 yyerror("TBREAK is not used in loop or switch.");
         
-        printAST(prog);
+        //printAST(root);
         delStack(stack);
+        generate(root, argv[1]);
+        delAST(root);
         return 0;
 }
 
