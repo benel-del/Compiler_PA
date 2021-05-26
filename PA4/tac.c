@@ -49,12 +49,14 @@ void genTAC(TAC* tac, ASTNode* node){
                 //setName(node, getSVal(node));
                 break;
         case _ARRAY:
+                setName(node, getTmp());
                 break;
         case _TYPE:
                 break;
         case _PARAMS:
                 break;
         case _PARAM:
+                //setName(node, getTmp());
                 break;
         case _CPNDSTMT: // o
                 if(r = getSibling(getChild(node))){     // _STMTLIST
@@ -90,7 +92,7 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _SWSTMT:
                 break;
-        case _RTSTMT:   // o
+        case _RTSTMT:   // o?
                 l = getChild(node);
                 if(l)
                         emit(tac, "Return %n", l);
@@ -154,17 +156,16 @@ void genTAC(TAC* tac, ASTNode* node){
                 }
                 enterChildNode = 0;
                 break;
-        case _OPER:     // x
+        case _OPER:     // ?
                 break;
-        case _INTEGER:  // o
-                sprintf(temp, "%d", getIVal(node));     // ???
-                setName(node, temp);
+        case _INTEGER:  // ???
                 break;
         case _REAL:     // x
                 break;
         case _ARGS:     // o
                 argCnt = 0;
-                bar(tac, getChild(node));
+                r = getSibling(getChild(node));
+                bar(tac, getChild(r));
                 enterChildNode = 0;
                 break;
         case _FUNCCALL: // o
@@ -188,7 +189,10 @@ void genTAC(TAC* tac, ASTNode* node){
         case _VARDEC:
                 break;
         case _FUNCDEC:  // o
-                emit(tac, "EndFunc");
+                l = getChild(node);
+                if(r = getSibling(getSibling(getSibling(l)))){      // _CPNDSTMT
+                        emit(tac, "EndFunc");
+                }
                 break;
         case _ID:
                 break;
