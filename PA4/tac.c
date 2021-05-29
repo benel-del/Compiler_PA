@@ -10,9 +10,19 @@ void bar(TAC* tac, ASTNode* arg){
         if(getSibling(arg))
                 bar(tac, getSibling(arg));
         genTAC(tac, arg);
-        emit(tac, "PushParam %n", arg);
+        if(getTkNum(arg) == _INTEGER){
+                printf("PushParam %d\n", getIVal(arg));
+                emit(tac, "PushParam %d", getIVal(arg));
+        }
+        else{
+                printf("PushParam %s\n", getName(arg));
+                emit(tac, "PushParam %n", arg);
+        }
 }
-
+void foo(TAC* tac, ASTNode* args){
+        argCnt = 0;
+        bar(tac, getChild(args));
+}
 void generate(ASTNode* root, char* filename){
         checkSymbols(root);
         TAC* tac = initTAC();
@@ -25,7 +35,7 @@ void generate(ASTNode* root, char* filename){
 void genTAC(TAC* tac, ASTNode* node){
         int enterChildNode = 1;
         ASTNode *l, *r, *m;
-        char *L0, *L1;
+        char *L0, *L1, *L2;
         char temp[10];
         if(!tac)        return;
         if(!node)       return;
@@ -40,6 +50,7 @@ void genTAC(TAC* tac, ASTNode* node){
         case _FUNCDEC:  // o
                 l = getChild(node);
                 if(r = getSibling(getSibling(getSibling(l)))){      // _CPNDSTMT
+                        //printf("BeginFunc\n");
                         emit(tac, "BeginFunc");
                         genTAC(tac, r);
                 }
@@ -48,8 +59,16 @@ void genTAC(TAC* tac, ASTNode* node){
         case _ID:       // ?
                 //setName(node, getSVal(node));
                 break;
-        case _ARRAY:
+        case _ARRAY:    // o
+                l = getChild(node), r = getSibling(l);
+                m = makeASTNodeTYPE(NO_TYPE);
+                setName(m, getTmp());
+                printf("%s = %s * %d\n", getName(m), getName(r), 4);
+                emit(tac, "%n = %n * %d", m, r, 4);
                 setName(node, getTmp());
+                printf("%s = %s + %s\n", getName(node), getName(l), getName(m));
+                emit(tac, "%n = %n + %n", node, l, m);
+                enterChildNode = 0;
                 break;
         case _TYPE:
                 break;
@@ -72,21 +91,27 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _IFSTMT:   // o
                 L0 = getLabel();
-                l = getChild(node), m = getSibling(l), r = getSibling(r);
-                //pushLabel(ls, L0);
+                l = getChild(node), m = getSibling(l), r = getSibling(m);
+                pushLabel(ls, L0);
 
                 genTAC(tac, l);
+                printf("IFZ %s Goto %s\n", getName(l), L0);
                 emit(tac, "IFZ %n Goto %s", l, L0);
                 genTAC(tac, m);
+                
                 if(r){
                         L1 = getLabel();
+                        printf("Goto %s\n", L1);
                         emit(tac, "Goto %s", L1);
                 }
-                emit(tac, "%s:", L0/*popLabel(ls)*/);
+                printf("%s: \n", L0);
+                emit(tac, "%s:", L0);
                 if(r){
-                        //pushLabel(ls, L1);
+                        pushLabel(ls, L1);
                         genTAC(tac, r);
-                        emit(tac, "%s:", L1/*popLabel(ls)*/);
+                        printf("%s:\n", L1);
+                        emit(tac, "%s:", L1);
+                        popLabel(ls);
                 }
                 enterChildNode = 0;
                 break;
@@ -94,43 +119,85 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _RTSTMT:   // o?
                 l = getChild(node);
-                if(l)
-                        emit(tac, "Return %n", l);
-                else
+                if(l){
+                        if(getTkNum(l) == _INTEGER){
+                                printf("return %d\n", getIVal(l));
+                                emit(tac, "Return %d", getIVal(l));
+                        }
+                        else{
+                                printf("return %s\n", getName(l));
+                                emit(tac, "Return %n", l);
+                        }
+                }
+                else{
+                        printf("return\n");
                         emit(tac, "Return");
+                }
                 enterChildNode = 0;
                 break;
         case _BRKSTMT:  // o
+                printf("Goto %s\n", topLabel(ls));
                 emit(tac, "Goto %s", topLabel(ls));
                 break;
         case _WHLSTMT:  // o
                 L0 = getLabel(), L1 = getLabel();
                 l = getChild(node), r = getSibling(l);
+                printf("%s:\n", L0);
                 emit(tac, "%s:", L0);
                 pushLabel(ls, L1);
 
                 genTAC(tac, l);
+                printf("IFZ %s Goto %s\n", getName(l), L1);
                 emit(tac, "IFZ %n Goto %s", l, L1);
 
                 genTAC(tac, r);
+                printf("Goto %s\n", L0);
                 emit(tac, "Goto %s", L0);
-                emit(tac, "%s:", popLabel(ls));
+                printf("%s:\n", topLabel(ls));
+                emit(tac, "%s:", topLabel(ls));
+
+                // printf("Goto %s\n", L2);
+                emit(tac, "Goto %s", L2);
+                // printf("%s:\n", topLabel(ls));
+                // emit(tac, "%s:", popLabel(ls));
                 enterChildNode = 0;
                 break;
-        case _DOWHLSTMT:
+        case _DOWHLSTMT:        // ?
+                L0 = getLabel(), L1 = getLabel(), L2 = getLabel();
+                printf("%s:\n", L0);
+                emit(tac, "%s:", L0);
+                pushLabel(ls, L0);
+                pushLabel(ls, L1);
+
+                genTAC(tac, l);
+                printf("Goto %s\n", L2);
+                emit(tac, "Goto %s", L2);
+                printf("%s:\n", L2);
+                emit(tac,"%s:", L2);
+
+                genTAC(tac, r);
+                printf("IFZ %s Goto %s\n", getName(r), topLabel(ls));
+                emit(tac, "IFZ %n Goto %s", r, popLabel(ls));
+                printf("Goto %s\n", topLabel(ls));
+                emit(tac, "Goto %s", popLabel(ls));
+                enterChildNode = 0;
                 break;
         case _FORSTMT:  // o
                 L0 = getLabel(), L1 = getLabel();
                 l = getChild(node), m = getSibling(l), r = getSibling(m);
                 genTAC(tac, l);
+                printf("%s:\n", L0);
                 emit(tac, "%s:", L0);
                 genTAC(tac, m);
+                printf("IFZ %s Goto %s\n", getName(m), L1);
                 emit(tac, "IFZ %n Goto %s", m, L1);
                 pushLabel(ls, L1);
 
                 genTAC(tac, getSibling(r));     // _CPNDSTMT
                 genTAC(tac, r);
+                printf("Goto %s\n", L0);
                 emit(tac, "Goto %s", L0);
+                printf("%s:\n", topLabel(ls));
                 emit(tac, "%s:", popLabel(ls));
                 enterChildNode = 0;
                 break;
@@ -141,35 +208,44 @@ void genTAC(TAC* tac, ASTNode* node){
         case _INCDECEXP:        // o
                 setName(node, getTmp());
                 l = getChild(node), r = getSibling(l);
-                if(getTkNum(l) == _OPER){   // operator:: 전위 증감자
-                        if(getOperator(l) == INC_)
-                                emit(tac, "%n = %n + 1", r, r);
-                        else if(getOperator(l) == DEC_)
-                                emit(tac, "%n = %n - 1", r, r);
+                if(getTkNum(r) == _ID){   // operator:: 전위 증감자
+                        if(getOperator(l) == INC_){
+                                printf("%s = %s + 1\n", getName(r), getName(r));
+                                emit(tac, "%n = %n + %d", r, r, 1);
+                        }
+                        else if(getOperator(l) == DEC_){
+                                printf("%s = %s - 1\n", getName(r), getName(r));
+                                emit(tac, "%n = %n - %d", r, r, 1);
+                        }
                 }
-                else if(getTkNum(r) == _OPER){   // 후위 증감자
+                else if(getTkNum(l) == _ID){   // 후위 증감자
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
-                        if(getOperator(r) == INC_)
-                                emit(tac, "%n = %n + 1", l, l);
-                        else if(getOperator(r) == DEC_)
-                                emit(tac, "%n = %n - 1", l, l);
+                        if(getOperator(r) == INC_){
+                                printf("%s = %s + 1\n", getName(l), getName(l));
+                                emit(tac, "%n = %n + %d", l, l, 1);
+                        }
+                        else if(getOperator(r) == DEC_){
+                                printf("%s = %s - 1\n", getName(r), getName(r));
+                                emit(tac, "%n = %n - %d", l, l, 1);
+                        }
                 }
                 enterChildNode = 0;
                 break;
         case _OPER:     // ?
                 break;
         case _INTEGER:  // ???
+                sprintf(temp, "%d", getIVal(node));
+                setName(node, temp);
                 break;
         case _REAL:     // x
                 break;
-        case _ARGS:     // o
-                argCnt = 0;
-                r = getSibling(getChild(node));
-                bar(tac, getChild(r));
-                enterChildNode = 0;
+        case _ARGS:     // x
                 break;
-        case _FUNCCALL: // o
-                genTAC(tac, getSibling(getChild(node)));        // r
+        case _FUNCCALL: // ?
+                l = getChild(node), r = getSibling(l);
+                foo(tac, r);
+                //genTAC(tac, getSibling(getChild(node)));        // r
                 enterChildNode = 0;
                 break;
         }
@@ -191,6 +267,7 @@ void genTAC(TAC* tac, ASTNode* node){
         case _FUNCDEC:  // o
                 l = getChild(node);
                 if(r = getSibling(getSibling(getSibling(l)))){      // _CPNDSTMT
+                        printf("EndFunc\n");
                         emit(tac, "EndFunc");
                 }
                 break;
@@ -237,66 +314,99 @@ void genTAC(TAC* tac, ASTNode* node){
                 l = getChild(node), r = getSibling(l);
                 switch(getOperator(node)){
                 case PLUS_:
+                        printf("%s = %s + %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n + %n", node, l, r);
                         break;
                 case MINUS_:
+                        printf("%s = %s - %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n - %n", node, l, r);
                         break;
                 case MULT_:
+                        printf("%s = %s * %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n * %n", node, l, r);
                         break;
                 case DIV_:
+                        printf("%s = %s / %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n / %n", node, l, r);
                         break;
                 case MOD_:
+                        printf("%s = %s %% %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n %% %n", node, l, r);
                         break;
                 case EQ_:
+                        printf("%s = %s == %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n == %n", node, l, r);
                         break;
                 case NE_:
+                        printf("%s = %s != %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n != %n", node, l, r);
                         break;
                 case GT_:
+                        printf("%s = %s > %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n > %n", node, l, r);
                         break;
                 case LT_:
+                        printf("%s = %s < %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n < %n", node, l, r);
                         break;
                 case GE_:
+                        printf("%s = %s >= %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n >= %n", node, l, r);
                         break;
                 case LE_:
+                        printf("%s = %s <= %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n <= %n", node, l, r);
                         break;
                 case AND_:
+                        printf("%s = %s && %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n && %n", node, l, r);
                         break;
                 case OR_:
+                        printf("%s = %s || %s\n", getName(node), getName(l), getName(r));
                         emit(tac, "%n = %n || %n", node, l, r);
                         break;
                 case ASSIGN_:
-                        emit(tac, "%n = %n", l, r);
-                        emit(tac, "%n = %n", node, l);
+                        if(getTkNum(l) == _ARRAY){
+                                printf("%s = %s\n", makePointer(getName(l)), getName(r));
+                                emit(tac, "%s = %n", makePointer(getName(l)), r);
+                                printf("%s = %s\n", getName(node), makePointer(getName(l)));
+                                emit(tac, "%n = %s", node, makePointer(getName(l)));
+                        }
+                        else{
+                                printf("%s = %s\n", getName(l), getName(r));
+                                emit(tac, "%n = %n", l, r);
+                                printf("%s = %s\n", getName(node), getName(l));
+                                emit(tac, "%n = %n", node, l);
+                        }
                         break;
                 case ADDASSIGN_:
+                        printf("%s = %s + %s\n", getName(l), getName(l), getName(r));
                         emit(tac, "%n = %n + %n", l, l, r);
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
                         break;
                 case SUBASSIGN_:
+                        printf("%s = %s - %s\n", getName(l), getName(l), getName(r));
                         emit(tac, "%n = %n - %n", l, l, r);
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
                         break;
                 case MULTASSIGN_:
+                        printf("%s = %s * %s\n", getName(l), getName(l), getName(r));
                         emit(tac, "%n = %n * %n", l, l, r);
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
                         break;
                 case DIVASSIGN_:
+                        printf("%s = %s / %s\n", getName(l), getName(l), getName(r));
                         emit(tac, "%n = %n / %n", l, l, r);
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
                         break;
                 case MODASSIGN_:
+                        printf("%s = %s %% %s\n", getName(l), getName(l), getName(r));
                         emit(tac, "%n = %n %% %n", l, l, r);
+                        printf("%s = %s\n", getName(node), getName(l));
                         emit(tac, "%n = %n", node, l);
                         break;
                 }
@@ -307,9 +417,12 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _ARGS:     // x
                 break;
-        case _FUNCCALL:
+        case _FUNCCALL: // o
+                l = getChild(node);
                 setName(node, getTmp());
-                emit(tac, "%n = LCALL %n", node, getChild(node));
+                printf("%s = LCall %s\n", getName(node), getName(l));
+                emit(tac, "%n = LCall %n", node, l);
+                printf("PopParam %d\n", argCnt * 4);
                 emit(tac, "PopParam %d", argCnt * 4);
                 break;
         }
