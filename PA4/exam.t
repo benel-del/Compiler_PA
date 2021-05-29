@@ -41,7 +41,6 @@ qSort:
         PopParam 12
         EndFunc
 quickSort:
-        Left node is NULL!      :: ??
         BeginFunc 156
         $t15 = #2 >= #3
         IFZ $t15 Goto L3
@@ -117,7 +116,7 @@ printArray:
         BeginFunc 132
         i@1 = 0
         $t50 = i@1
-L10:
+L10:                            //
         $t51 = i@1 % 10
         $t52 = $t51 != 9
         IFZ $t52 Goto L13

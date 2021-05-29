@@ -59,16 +59,7 @@ void genTAC(TAC* tac, ASTNode* node){
         case _ID:       // ?
                 //setName(node, getSVal(node));
                 break;
-        case _ARRAY:    // o
-                l = getChild(node), r = getSibling(l);
-                m = makeASTNodeTYPE(NO_TYPE);
-                setName(m, getTmp());
-                printf("%s = %s * %d\n", getName(m), getName(r), 4);
-                emit(tac, "%n = %n * %d", m, r, 4);
-                setName(node, getTmp());
-                printf("%s = %s + %s\n", getName(node), getName(l), getName(m));
-                emit(tac, "%n = %n + %n", node, l, m);
-                enterChildNode = 0;
+        case _ARRAY:    // x
                 break;
         case _TYPE:
                 break;
@@ -117,7 +108,7 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _SWSTMT:
                 break;
-        case _RTSTMT:   // o?
+        case _RTSTMT:   // o
                 l = getChild(node);
                 if(l){
                         if(getTkNum(l) == _INTEGER){
@@ -201,33 +192,44 @@ void genTAC(TAC* tac, ASTNode* node){
                 emit(tac, "%s:", popLabel(ls));
                 enterChildNode = 0;
                 break;
-        case _CASE:
+        case _CASE:     // ?
+                
+
                 break;
         case _DEFAULT:
                 break;
-        case _INCDECEXP:        // o
-                setName(node, getTmp());
+        case _INCDECEXP:        // ?
                 l = getChild(node), r = getSibling(l);
-                if(getTkNum(r) == _ID){   // operator:: 전위 증감자
+                if(getTkNum(r) == _ID){   // 전위 증감자 ++id
+                        if(getTkNum(r) == _ARRAY)
+                                L0 = makePointer(getName(r));
+                        else
+                                L0 = getName(r);
                         if(getOperator(l) == INC_){
-                                printf("%s = %s + 1\n", getName(r), getName(r));
-                                emit(tac, "%n = %n + %d", r, r, 1);
+                                printf("%s = %s + 1\n", L0, L0);
+                                emit(tac, "%s = %s + %d", L0, L0, 1);
                         }
                         else if(getOperator(l) == DEC_){
-                                printf("%s = %s - 1\n", getName(r), getName(r));
-                                emit(tac, "%n = %n - %d", r, r, 1);
+                                printf("%s = %s - 1\n", L0, L0);
+                                emit(tac, "%s = %s - %d", L0, L0, 1);
                         }
+                        setName(node, getName(r));
                 }
-                else if(getTkNum(l) == _ID){   // 후위 증감자
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                else if(getTkNum(l) == _ID){   // 후위 증감자 id++
+                        setName(node, getTmp());
+                        if(getTkNum(l) == _ARRAY)
+                                L0 = makePointer(getName(l));
+                        else
+                                L0 = getName(l);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         if(getOperator(r) == INC_){
-                                printf("%s = %s + 1\n", getName(l), getName(l));
-                                emit(tac, "%n = %n + %d", l, l, 1);
+                                printf("%s = %s + 1\n", L0, L0);
+                                emit(tac, "%s = %s + %d", L0, L0, 1);
                         }
                         else if(getOperator(r) == DEC_){
-                                printf("%s = %s - 1\n", getName(r), getName(r));
-                                emit(tac, "%n = %n - %d", l, l, 1);
+                                printf("%s = %s - 1\n", getName(l), getName(l));
+                                emit(tac, "%s = %s - %d", L0, L0, 1);
                         }
                 }
                 enterChildNode = 0;
@@ -273,7 +275,15 @@ void genTAC(TAC* tac, ASTNode* node){
                 break;
         case _ID:
                 break;
-        case _ARRAY:
+        case _ARRAY:    // o
+                l = getChild(node), r = getSibling(l);
+                m = makeASTNodeTYPE(NO_TYPE);
+                setName(m, getTmp());
+                printf("%s = %s * %d\n", getName(m), getName(r), 4);
+                emit(tac, "%n = %n * %d", m, r, 4);
+                setName(node, getTmp());
+                printf("%s = %s + %s\n", getName(node), getName(l), getName(m));
+                emit(tac, "%n = %n + %n", node, l, m);
                 break;
         case _TYPE:
                 break;
@@ -312,102 +322,102 @@ void genTAC(TAC* tac, ASTNode* node){
         case _OPER:     // o
                 setName(node, getTmp());
                 l = getChild(node), r = getSibling(l);
+                if(getTkNum(l) == _ARRAY)
+                        L0 = makePointer(getName(l));
+                else
+                        L0 = getName(l);
+                if(getTkNum(r) == _ARRAY)
+                        L1 = makePointer(getName(r));
+                else
+                        L1 = getName(r);
                 switch(getOperator(node)){
                 case PLUS_:
-                        printf("%s = %s + %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n + %n", node, l, r);
+                        printf("%s = %s + %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s + %s", node, L0, L1);
                         break;
                 case MINUS_:
-                        printf("%s = %s - %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n - %n", node, l, r);
+                        printf("%s = %s - %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s - %s", node, L0, L1);
                         break;
                 case MULT_:
-                        printf("%s = %s * %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n * %n", node, l, r);
+                        printf("%s = %s * %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s * %s", node, L0, L1);
                         break;
                 case DIV_:
-                        printf("%s = %s / %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n / %n", node, l, r);
+                        printf("%s = %s / %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s / %s", node, L0, L1);
                         break;
                 case MOD_:
-                        printf("%s = %s %% %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n %% %n", node, l, r);
+                        printf("%s = %s %% %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s %% %s", node, L0, L1);
                         break;
                 case EQ_:
-                        printf("%s = %s == %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n == %n", node, l, r);
+                        printf("%s = %s == %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s == %s", node, L0, L1);
                         break;
                 case NE_:
-                        printf("%s = %s != %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n != %n", node, l, r);
+                        printf("%s = %s != %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s != %s", node, L0, L1);
                         break;
                 case GT_:
-                        printf("%s = %s > %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n > %n", node, l, r);
+                        printf("%s = %s > %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s > %s", node, L0, L1);
                         break;
                 case LT_:
-                        printf("%s = %s < %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n < %n", node, l, r);
+                        printf("%s = %s < %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s < %s", node, L0, L1);
                         break;
                 case GE_:
-                        printf("%s = %s >= %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n >= %n", node, l, r);
+                        printf("%s = %s >= %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s >= %s", node, L0, L1);
                         break;
                 case LE_:
-                        printf("%s = %s <= %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n <= %n", node, l, r);
+                        printf("%s = %s <= %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s <= %s", node, L0, L1);
                         break;
                 case AND_:
-                        printf("%s = %s && %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n && %n", node, l, r);
+                        printf("%s = %s && %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s && %s", node, L0, L1);
                         break;
                 case OR_:
-                        printf("%s = %s || %s\n", getName(node), getName(l), getName(r));
-                        emit(tac, "%n = %n || %n", node, l, r);
+                        printf("%s = %s || %s\n", getName(node), L0, L1);
+                        emit(tac, "%n = %s || %s", node, L0, L1);
                         break;
                 case ASSIGN_:
-                        if(getTkNum(l) == _ARRAY){
-                                printf("%s = %s\n", makePointer(getName(l)), getName(r));
-                                emit(tac, "%s = %n", makePointer(getName(l)), r);
-                                printf("%s = %s\n", getName(node), makePointer(getName(l)));
-                                emit(tac, "%n = %s", node, makePointer(getName(l)));
-                        }
-                        else{
-                                printf("%s = %s\n", getName(l), getName(r));
-                                emit(tac, "%n = %n", l, r);
-                                printf("%s = %s\n", getName(node), getName(l));
-                                emit(tac, "%n = %n", node, l);
-                        }
+                        printf("%s = %s\n", L0, L1);
+                        emit(tac, "%s = %s", L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 case ADDASSIGN_:
-                        printf("%s = %s + %s\n", getName(l), getName(l), getName(r));
-                        emit(tac, "%n = %n + %n", l, l, r);
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                        printf("%s = %s + %s\n", L0, L0, L1);
+                        emit(tac, "%s = %s + %s", L0, L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 case SUBASSIGN_:
-                        printf("%s = %s - %s\n", getName(l), getName(l), getName(r));
-                        emit(tac, "%n = %n - %n", l, l, r);
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                        printf("%s = %s - %s\n", L0, L0, L1);
+                        emit(tac, "%s = %s - %s", L0, L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 case MULTASSIGN_:
-                        printf("%s = %s * %s\n", getName(l), getName(l), getName(r));
-                        emit(tac, "%n = %n * %n", l, l, r);
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                        printf("%s = %s * %s\n", L0, L0, L1);
+                        emit(tac, "%s = %s * %s", L0, L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 case DIVASSIGN_:
-                        printf("%s = %s / %s\n", getName(l), getName(l), getName(r));
-                        emit(tac, "%n = %n / %n", l, l, r);
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                        printf("%s = %s / %s\n", L0, L0, L1);
+                        emit(tac, "%s = %s / %s", L0, L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 case MODASSIGN_:
-                        printf("%s = %s %% %s\n", getName(l), getName(l), getName(r));
-                        emit(tac, "%n = %n %% %n", l, l, r);
-                        printf("%s = %s\n", getName(node), getName(l));
-                        emit(tac, "%n = %n", node, l);
+                        printf("%s = %s %% %s\n", L0, L0, L1);
+                        emit(tac, "%s = %s %% %s", L0, L0, L1);
+                        printf("%s = %s\n", getName(node), L0);
+                        emit(tac, "%n = %s", node, L0);
                         break;
                 }
                 break;
