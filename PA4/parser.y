@@ -572,7 +572,7 @@ int main(int argc, char* argv[]){
         if(isBrError)
                 yyerror("TBREAK is not used in loop or switch.");
         
-        //printAST(root);
+        printAST(root);
         delStack(stack);
         generate(root, argv[1]);
         delAST(root);
