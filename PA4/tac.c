@@ -35,7 +35,7 @@ void generate(ASTNode* root, char* filename){
 void genTAC(TAC* tac, ASTNode* node){
         int enterChildNode = 1;
         ASTNode *l, *r, *m;
-        char *L0, *L1, *L2;
+        char *L[20];
         char temp[10];
         if(!tac)        return;
         if(!node)       return;
@@ -106,7 +106,29 @@ void genTAC(TAC* tac, ASTNode* node){
                 }
                 enterChildNode = 0;
                 break;
-        case _SWSTMT:
+        case _SWSTMT:   // ?
+                L0 = getLabel();
+                pushLabel(ls, L0);
+                m = getChild(node);
+                genTAC(tac, m); // switch(exp)
+
+                for(l = getSibling(m); getSibling(l); l = getSibling(l)){
+                        L1 = getLabel(ls);
+                        r = makeASTNodeTYPE(NO_TYPE);
+                        if(getTkNum(getSibling(l)) != _DEFAULT)
+                                emit(tac, "%n = %n != %n", r, m, getChild(l));
+                        else
+                                emit(tac, "%n = %n == %n", r, m, getChild(l));
+                        emit(tac, "IFZ %n Goto %s", r, L1);
+                }
+
+                l = getSibling(m);
+                do{
+                        genTAC(tac, l);
+                        emit(tac, "%s: ", );
+                }while(l = getSibling(l));
+
+
                 break;
         case _RTSTMT:   // o
                 l = getChild(node);
@@ -192,9 +214,10 @@ void genTAC(TAC* tac, ASTNode* node){
                 emit(tac, "%s:", popLabel(ls));
                 enterChildNode = 0;
                 break;
-        case _CASE:     // ?
-                
-
+        case _CASE:     // o
+                l = getChild(node), r = getSibling(l);
+                genTAC(tac, r);
+                enterChildNode = 0;
                 break;
         case _DEFAULT:
                 break;
